@@ -1,5 +1,5 @@
 # GABI
-Genome Annotation with Bayesian Inference (GABI)
+Genome Annotation using Bayesian Inference (GABI)
 
 ## How to use:
 
