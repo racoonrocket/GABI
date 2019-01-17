@@ -32,7 +32,7 @@ matrixCTProba = gb.predict(matrixC,GetProba=True)
 ### Multiprocessing Version
 The multiprocessing version slice the samples in groups of similar cell types and apply GABI on each part before merging them.
 
-Additional inputs:
+#### Additional inputs:
  - distmat: (MxM distance matrix) Distance between the profiles. If empty, yule distance is used.
  - Nclust: Number of cell types per slices
  
