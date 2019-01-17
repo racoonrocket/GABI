@@ -4,11 +4,11 @@ Genome Annotation using Bayesian Inference (GABI)
 ## How to use:
 
 ### Simple Core Version
-inputs:
+#### Inputs:
  - matrix: MxN binary matrix
  - labels: M dim vector of profiles clusters (or cell type) membership
  
-output:
+#### Output:
  - matrixCT: (CxN binary matrix with C clusters (or cell types) ) Cleaned matrix
  - matrixCTProba: (CxN binary matrix with C clusters (or cell types) ) Cleaned matrix probability to have a peak
  - combmat: (CxK binary matrix with K combinations) Combinations between the cell types
