@@ -191,7 +191,7 @@ class GABI:
                 self.labels_state[i] = self.Tki.argmax(axis=0)
                 # PZ_X_max[i] = self.Tki.max(axis=0)
 
-            if self.verbose: print 'Building matrix from states'
+            if self.verbose: print ('Building matrix from states')
             matrixCT1 = np.zeros((self.NCT,N1))
             for l in tqdm(range(self.K),disable=not(self.verbose),desc=self.ID):
                 matrixCT1[:,self.labels_state==l] = self.combmat[:,l][:,None]
@@ -216,7 +216,7 @@ class GABI:
 
         #Check if the matrix is Binary
         if not check_if_binary_matrix(matrix):
-            print 'Matrix must be binary !'
+            print ('Matrix must be binary !')
             raise ValueError
 
         matrix = matrix.astype(np.int32)
@@ -259,7 +259,7 @@ class GABI:
                 self.set_parameter() #Store the parameters as best
                 self.diff = abs(self.Q - self.lbound)
                 self.lbound = self.Q
-                if self.verbose: print 'Lowest Bound: ' + str(self.lbound) + ' , Diff: ' + str(self.diff)
+                if self.verbose: print ('Lowest Bound: ' + str(self.lbound) + ' , Diff: ' + str(self.diff))
 
             #Gradient on the parameters
             self.m_step()
@@ -271,7 +271,7 @@ class GABI:
             #Get record of the evolution of the likelihood
             self.set_likelihood_record()
 
-        if self.verbose: print 'Final Likelihood ( Nstates =' + str(self.K) + ' ): ' + str(self.Q)
+        if self.verbose: print ('Final Likelihood ( Nstates =' + str(self.K) + ' ): ' + str(self.Q))
 
     def get_X(self,matrix,idx):
         '''
