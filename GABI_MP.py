@@ -108,7 +108,7 @@ class GABI:
 
     def get_FP_FN(self):
         '''
-            Return FP,FN,TP,TN from GABI optimizations
+            Return FP, FN, TP, TN from GABI optimizations
         '''
         FP = np.zeros(self.distmat.shape[0])
         FN = np.zeros(self.distmat.shape[0])
