@@ -10,7 +10,7 @@ from threading import Thread
 import queue as Queue
 
 from scipy.sparse import csr_matrix,csc_matrix
-import cPickle
+import _pickle as cPickle
 
 from tqdm import tqdm
 
@@ -57,16 +57,18 @@ class GABI:
         '''
 
         if self.verbose: print('Annotations')
-        list_threads = []
         # recv_end_c, send_end_c = zip(*[Pipe(False) for k in range(self.NP)])
+        list_threads = []
         while not self.queue.empty():
             for k in range(self.NP):
-                t = Threading(self.queue)
+                t = Threading(self.queue, k)
                 list_threads.append(t)
                 t.start()
 
             for thread in list_threads:
                 thread.join()
+
+        self.gb_c = [l.gb for l in list_threads]
 
         # try:
         #     for thread in list_threads:
@@ -176,16 +178,18 @@ class GABI:
 
 
 class Threading(Thread):
-    def __init__(self, queue):
+    def __init__(self, queue, k):
         Thread.__init__(self)
         self.queue = queue
-
+        self.id = k
     def run(self):
         if not self.queue.empty():
-            item = queue.get()
+            print('Thread %s Started' %self.k)
+            item = self.queue.get()
             item['gb'].fit(item['matrix'])
 
-        print('Threading Terminated')
+        self.gb = item['gb']
+        print('Thread %s Terminated' %self.k)
 
 
 ###########################################################

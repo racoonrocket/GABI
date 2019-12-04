@@ -4,7 +4,7 @@ from sklearn.exceptions import ConvergenceWarning
 import time
 import multiprocessing as mp
 from tqdm import tqdm
-import cPickle
+import _pickle as cPickle
 from scipy.sparse import issparse
 
 
