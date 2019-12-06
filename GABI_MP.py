@@ -184,12 +184,12 @@ class Threading(Thread):
         self.id = k
     def run(self):
         if not self.queue.empty():
-            print('Thread %s Started' %self.k)
+            print('Thread %s Started' %self.id)
             item = self.queue.get()
             item['gb'].fit(item['matrix'])
 
         self.gb = item['gb']
-        print('Thread %s Terminated' %self.k)
+        print('Thread %s Terminated' %self.id)
 
 
 ###########################################################
