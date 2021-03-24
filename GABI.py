@@ -1,10 +1,9 @@
 import numpy as np
-from sklearn.utils.extmath import logsumexp
-from sklearn.exceptions import ConvergenceWarning
+import sklearn
 import time
 import multiprocessing as mp
 from tqdm import tqdm
-import _pickle as cPickle
+#import _pickle as cPickle
 from scipy.sparse import issparse
 
 
@@ -278,10 +277,12 @@ class GABI:
             Get matrix Slice
         '''
         if self.issparse:
-            self.X = matrix[:,idx].toarray()
+            #iloc added
+            self.X = matrix.iloc[:,idx].toarray()
             # self.X = self.X[:,None]
         else:
-            self.X = matrix[:,idx][:,None]
+            #iloc added
+            self.X = matrix.iloc[:,idx][:,None]
 
     def set_likelihood_record(self):
         self.likelihood_record.append(self.Q)
@@ -365,7 +366,22 @@ def comb2states(labels,combmat):
 
     Rmat = np.zeros((M,NCT))
     for i in range(NCT):
-        Rmat[labels==i,i] = 1
+        print(labels)
+        print("lenramta = ")
+        print(len(Rmat))
+        print("ramta = ")
+        print(Rmat)
+        print("###################")
+        print([labels == i])
+        print("test")
+        #try and pass added
+        #Rmat[labels==i,i] modified to work
+        #/!\
+        for k in range(len(labels==i)):
+            if (labels == i).iat[k,0]:
+                Rmat[k,i] = 1
+        print("RMAT")
+        print(Rmat)
     statemat = Rmat.dot(combmat)
 
     return statemat
