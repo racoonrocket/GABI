@@ -5,21 +5,35 @@ from scipy.spatial.distance import squareform
 from sklearn.metrics.pairwise import pairwise_distances
 # import multiprocessing as mp
 #from multiprocessing import Process, Manager, Pipe
-
+import yaml
+import pyBigWig as bg
 from threading import Thread
 import queue as Queue
 
-from scipy.sparse import csr_matrix,csc_matrix
-import _pickle as cPickle
+from scipy.sparse import csr_matrix,coo_matrix,issparse,vstack,hstack
+import pickle
 
 from tqdm import tqdm
 
 import GABI as gbi
 
 class GABI:
-    def __init__(self,matrix,labels,distmat=[],verbose=False,NClust=5,tol=1e-2,max_iter=200):
+    def __init__(self,matrix=None,labels=None,distmat=[],bw=False,yamfile="sources.yaml",chr_list = [],verbose=False,NClust=5,tol=1e-2,max_iter=200):
 
-        self.labels = labels
+        self.bw = bw
+        if self.bw:
+            self.yamfile = yamfile
+            self.chr_list = chr_list
+            self.binsize = 1000
+            self.matrixbw = self.load_bigwig()
+            self.labels = self.labels.astype(np.int32)
+            matrix = self.matrixbw
+            self.issparse = issparse(matrix)
+        elif not self.bw:
+            self.labels = labels.astype(np.int32)
+            self.labels = labels
+            self.issparse = issparse(matrix)
+
         self.distmat = distmat
         self.verbose = verbose
         self.NClust = NClust
@@ -30,19 +44,29 @@ class GABI:
             raise ValueError
 
         #Check input variables
-        if self.NClust>labels.max()+1: self.NClust = labels.max()+1
+        if self.NClust>self.labels.max()+1: self.NClust = self.labels.max()+1
 
         #Compute the Distance matrix
         if len(distmat)==0:
             print ('Compute the Distance matrix')
             idx1 = np.where(matrix.sum(axis=0)>0)[0]   #We compute only the non zeros columns
-
-            self.distmat = yule_distance(matrix[:,idx1])
-            self.distmat[np.isnan(self.distmat)] = 1 #If a profile is null, Nan are produced
-
+            if not issparse(matrix):
+                idx1 = np.where(matrix.sum(axis=0) > 0)[0]  # We compute only the non zeros columns
+                self.distmat = yule_distance(matrix[:,idx1])
+                self.distmat[np.isnan(self.distmat)] = 1 #If a profile is null, Nan are produced
+                print("ya",self.distmat)
+            else:
+                # if the column exist in that sparsed matrix -> this column countain at least one one
+                idx1 = np.unique(matrix.indices)
+                self.distmat = yule_distance(matrix[:, idx1].toarray())
+                self.distmat[np.isnan(self.distmat)] = 1
+                print(self.distmat)
         if verbose: print ('Split Labels')
         self.labels_c,self.labels_cS,self.Idxlabels_c = get_labels_split(self.labels,self.distmat,self.NClust)
-        self.matrix_c = [matrix[idx,:] for idx in self.Idxlabels_c]
+        if not issparse(matrix):
+            self.matrix_c = [matrix[idx,:] for idx in self.Idxlabels_c]
+        else:
+            self.matrix_c = [matrix[idx, :].toarray() for idx in self.Idxlabels_c]
 
         self.NP = len(self.labels_c)
         self.queue = Queue.Queue()
@@ -50,6 +74,101 @@ class GABI:
             self.queue.put({'gb': gbi.GABI(self.labels_cS[k],verbose=verbose,tol=tol,max_iter=max_iter,ID='Thread: {}'.format(k)),
                             'matrix': self.matrix_c[k]
                             })
+
+    def load_bigwig(self):
+        """ TAke as input a path to a  .txt containing BigWig file path and return a matrix of concatenated epigenomic profiles of this BigWig
+        INPUT ::
+        path_to_all_bw : type = string, default = None is mandatory
+        bin_size : type = int , default = 500 kb
+        list_chr : type = list, defautl = ["chr21"] list of the chr you want to concatenate into you gabi matrix
+        OUTPUT ::
+        sparsedmatrix :: type = numpy.array ( a sparse matrix containing all epigenomics profile)
+        labelmatrix :: type = numpy.array ( array containing all the label of the same or not epigenomic profiles=
+        ouput =
+        labels = [1,1,2,..]"""
+        self.labels = []
+        self.general_positions = []
+        self.specific_position = []
+        compteur = 0
+        listaas = []
+        self.chrsizes = []
+        #pickle.dump(sparsedmatrix, open('sparsed.p', 'wb+'))
+        # First step make the labels vector
+        with open(self.yamfile) as yaml_file:
+            BW_paths = yaml.load(yaml_file)
+            BW_paths2 = []
+            for key in BW_paths:
+                self.labels.extend([key] * len(BW_paths[key]))
+                BW_paths2.extend([element for element in BW_paths[key]])
+            for OneBWPath in BW_paths2:
+                # Second step start to work on the BigWig file, binin and creating the matrix
+                with bg.open(OneBWPath) as BigWig:  # open the big wig
+                    chrom_dict = BigWig.chroms()
+                    for element in self.chr_list:
+                        #since there is no function to extract a specific bin size along a big wig
+                        #We create the maximum number of bin from the choosed bin size and add a litle bin to complete a the end
+                        #total nucleotides = number_of_bins * binsize + litle_bin (simple euclidian division)
+                        number_of_bins = chrom_dict[element] // self.binsize
+                        litle_bin = chrom_dict[element] % self.binsize
+                        chromvalues = [BigWig.stats(element, self.binsize * i, self.binsize * (i + 1))[0] for i in
+                                       range(number_of_bins)]
+                        if litle_bin != 0:
+                            chromvalues.extend(BigWig.stats(element, self.binsize * number_of_bins, chrom_dict[element]))
+                        chromvalues = [True if chromvalues[i] > 0.5 else False for i in range(len(chromvalues))]
+                        #here comes a lot of variables to keep track of index , start en ending of each bins
+                        #This is needed to recreate a bigwig at the end of GABI
+                        if BW_paths2.index(OneBWPath) == 0:
+                            self.general_positions.append([self.binsize * i + 1 for i in range(number_of_bins)])
+                            if litle_bin != 0:
+                                self.general_positions[-1].extend(number_of_bins * self.binsize + litle_bin + 1)
+                            if len(self.specific_position) != 0:
+                                self.specific_position.append([self.binsize * i + self.specific_position[-1][-1] + 1 for i in range(number_of_bins)])
+                            else:
+                                self.specific_position.append([self.binsize * i + 1 for i in range(number_of_bins)])
+                            self.savedheader = BigWig.header()
+                            self.chrsizes.append(chrom_dict[element])
+                            print(self.savedheader)
+                    #the matrix was saved on the hard disk to save some RAM
+                    #It was more usefull before when the matrix was not sparsed
+                    #maybe its not usefull anymore will see
+                    #listaas = pickle.load(open('sparsed.p', 'rb'))
+                    if len(listaas) == 0:
+                        listaas = [csr_matrix(chromvalues)]
+                    else:
+                        listaas.append(csr_matrix(chromvalues))
+                    #pickle.dump(listaas, open('sparsed.p', 'wb+'))
+                    #listaas = None
+        #listaas = pickle.load(open('sparsed.p', 'rb'))
+        self.labels = np.array(self.labels)
+        return vstack(listaas)
+
+    def save_as_bigwig(self, matrixCT,prename="Results/consolidated"):
+        """
+        Take the outpout of GABI predict or GABI MP (matrixCT) and saved it as a one big wig file per consolidate profile
+        INPUT::
+        GABI object class
+        matrixCT from GABI.predict() function
+
+        """
+        profile_number = 0
+        for profile in matrixCT:
+            with bg.open(prename + "_" + str(profile_number) + ".bw","w") as bw:
+                profile_number +=1
+                newheader = []
+                for k in range(len(self.chr_list)):
+                    print("chrsizek", self.chrsizes)
+                    newheader.append((self.chr_list[k], self.chrsizes[k]))
+                bw.addHeader(newheader)
+                #print(self.general_positions,self.chrsizes)
+                #print(self.general_positions,self.general_positions[1:]+self.chrsizes,matrixCT)
+                print("len",self.general_positions[0],"chrsize",self.chrsizes)
+                    #faut créer un bigwig part type cellulaire
+                for i in range(len(self.chr_list)):
+                    print(self.chr_list[i]*len(self.general_positions[i]))
+                    print(self.general_positions[i])
+                    print(self.general_positions[i][1:]+[self.chrsizes[i]])
+                    bw.addEntries([self.chr_list[i]]*len(self.general_positions[i]),self.general_positions[i],ends=self.general_positions[i][1:]+[self.chrsizes[i]],values=[profile[k] for k in range(len(profile))],validate=False)
+
 
     def fit(self):
         '''
@@ -403,17 +522,27 @@ def comb2states(labels,combmat):
     Rmat = np.zeros((M,NCT))
     for i in range(NCT):
         Rmat[labels==i,i] = 1
+    print(Rmat)
+    print(combmat)
     statemat = Rmat.dot(combmat)
 
     return statemat
 
 def check_if_binary_matrix(matrix):
     #Define if the matrix is boolean or Discrete
-    uniq = np.unique(matrix)
-    if len(uniq)==2:
-        Binary = np.all(uniq==np.array([False,True]))
+    if not issparse(matrix):
+        uniq = np.unique(matrix)
+        print("UNIQUE IS UNIQUE" + str(uniq))
+        if len(uniq)==2:
+            Binary = np.all(uniq==np.array([False,True]))
+        else:
+            Binary = False
     else:
-        Binary = False
+        #if its a sparsed matrix it should only have one value in it if the non sparsed is binary
+        if len(np.unique(matrix.data)) ==1:
+            Binary = True
+        else:
+            Binary = False
 
     return Binary
 
