@@ -32,7 +32,7 @@ class GABI:
         if self.bw:
             self.yamfile = yamfile
             self.chr_list = chr_list
-            self.binsize = 1000
+            self.binsize = 200
             self.matrixbw = self.load_bigwig()
             self.labels = self.labels.astype(np.int32)
         elif not self.bw:
@@ -94,6 +94,7 @@ class GABI:
                 self.labels.extend([key] * len(BW_paths[key]))
                 BW_paths2.extend([element for element in BW_paths[key]])
             for OneBWPath in BW_paths2:
+                print(OneBWPath)
                 # Second step start to work on the BigWig file, binin and creating the matrix
                 with bg.open(OneBWPath) as BigWig:  # open the big wig
                     chrom_dict = BigWig.chroms()
@@ -108,13 +109,14 @@ class GABI:
                         if litle_bin != 0:
                             chromvalues.extend(
                                 BigWig.stats(element, self.binsize * number_of_bins, chrom_dict[element]))
-                        chromvalues = [True if chromvalues[i] > 0.5 else False for i in range(len(chromvalues))]
+                        chromvalues = [0 if chromvalues[i] is None else chromvalues[i] for i in range(len(chromvalues))]
+                        chromvalues = [True if int(chromvalues[i]) > 0.5 else False for i in range(len(chromvalues))]
                         # here comes a lot of variables to keep track of index , start en ending of each bins
                         # This is needed to recreate a bigwig at the end of GABI
                         if BW_paths2.index(OneBWPath) == 0:
                             self.general_positions.append([self.binsize * i + 1 for i in range(number_of_bins)])
                             if litle_bin != 0:
-                                self.general_positions[-1].extend(number_of_bins * self.binsize + litle_bin + 1)
+                                self.general_positions[-1].append(number_of_bins * self.binsize + litle_bin + 1)
                             if len(self.specific_position) != 0:
                                 self.specific_position.append(
                                     [self.binsize * i + self.specific_position[-1][-1] + 1 for i in
@@ -138,7 +140,7 @@ class GABI:
         self.labels = np.array(self.labels)
         return vstack(listaas)
 
-    def save_as_bigwig(self, matrixCT,prename="Results/consolidated"):
+    def save_as_bigwig(self, matrixCT,prename="consolidated"):
         """
         Take the outpout of GABI predict or GABI MP (matrixCT) and saved it as a one big wig file per consolidate profile
         INPUT::
@@ -467,6 +469,7 @@ def check_if_binary_matrix(matrix):
     #Define if the matrix is boolean or Discrete
     if not issparse(matrix):
         uniq = np.unique(matrix)
+        print(uniq)
         print("UNIQUE IS UNIQUE" + str(uniq))
         if len(uniq)==2:
             Binary = np.all(uniq==np.array([False,True]))
@@ -477,6 +480,7 @@ def check_if_binary_matrix(matrix):
         if len(np.unique(matrix.data)) ==1:
             Binary = True
         else:
+            print(np.unique(matrix.data))
             Binary = False
 
     return Binary

@@ -24,7 +24,7 @@ class GABI:
         if self.bw:
             self.yamfile = yamfile
             self.chr_list = chr_list
-            self.binsize = 1000
+            self.binsize = 100000
             self.matrixbw = self.load_bigwig()
             self.labels = self.labels.astype(np.int32)
             matrix = self.matrixbw
@@ -102,7 +102,8 @@ class GABI:
                 BW_paths2.extend([element for element in BW_paths[key]])
             for OneBWPath in BW_paths2:
                 # Second step start to work on the BigWig file, binin and creating the matrix
-                with bg.open(OneBWPath) as BigWig:  # open the big wig
+                with bg.open(OneBWPath) as BigWig:
+                    print(OneBWPath)                                 # open the big wig
                     chrom_dict = BigWig.chroms()
                     for element in self.chr_list:
                         #since there is no function to extract a specific bin size along a big wig
@@ -114,13 +115,14 @@ class GABI:
                                        range(number_of_bins)]
                         if litle_bin != 0:
                             chromvalues.extend(BigWig.stats(element, self.binsize * number_of_bins, chrom_dict[element]))
+                        chromvalues = [0 if chromvalues[i] is None else chromvalues[i] for i in range(len(chromvalues))]
                         chromvalues = [True if chromvalues[i] > 0.5 else False for i in range(len(chromvalues))]
                         #here comes a lot of variables to keep track of index , start en ending of each bins
                         #This is needed to recreate a bigwig at the end of GABI
                         if BW_paths2.index(OneBWPath) == 0:
                             self.general_positions.append([self.binsize * i + 1 for i in range(number_of_bins)])
                             if litle_bin != 0:
-                                self.general_positions[-1].extend(number_of_bins * self.binsize + litle_bin + 1)
+                                self.general_positions[-1].append(number_of_bins * self.binsize + litle_bin + 1)
                             if len(self.specific_position) != 0:
                                 self.specific_position.append([self.binsize * i + self.specific_position[-1][-1] + 1 for i in range(number_of_bins)])
                             else:
@@ -517,8 +519,8 @@ def comb2states(labels,combmat):
         Combination of cell types to combination of profiles.
     '''
     M = len(labels)
+    print("labels = ", labels)
     NCT = int(labels.max() + 1)
-
     Rmat = np.zeros((M,NCT))
     for i in range(NCT):
         Rmat[labels==i,i] = 1
