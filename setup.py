@@ -17,7 +17,8 @@ setuptools.setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    install_requires=['numpy','scipy','tdqm','pyBigWig'],
-    packages=["src"],
+    packages=['gabi'],
+    package_dir={'gabi': 'src'},
+    install_requires=['numpy','scipy','tdqm','pybigwig'],
     python_requires=">=3.6",
 )

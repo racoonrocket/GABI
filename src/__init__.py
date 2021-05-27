@@ -1,3 +1,2 @@
-import GABI
-import GABI_MP
-
+from .GABI import *
+from .GABI_MP import * 

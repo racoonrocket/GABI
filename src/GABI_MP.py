@@ -15,7 +15,7 @@ import pickle
 
 from tqdm import tqdm
 
-import GABI as gbi
+from . import GABI as gbi
 
 class GABI:
     def __init__(self,matrix=None,labels=None,distmat=[],bw=False,yamfile="sources.yaml",chr_list = [],verbose=False,NClust=5,tol=1e-2,max_iter=200):
