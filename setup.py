@@ -17,8 +17,10 @@ setuptools.setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    packages=['gabi'],
-    package_dir={'gabi': 'src'},
+    packages=['GABI'],
+    package_dir={'GABI': 'src'},
+    include_package_data=True,
+    package_data ={'GABI': ['src/*.yaml']},
     install_requires=['numpy','scipy','tdqm','pybigwig'],
     python_requires=">=3.6",
 )

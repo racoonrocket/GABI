@@ -2,14 +2,19 @@ import numpy as np
 
 from scipy.cluster.hierarchy import linkage, leaves_list
 from scipy.spatial.distance import squareform
+from sklearn.metrics.pairwise import pairwise_distances
 # import multiprocessing as mp
 #from multiprocessing import Process, Manager, Pipe
 import yaml
 import pyBigWig as bg
 from threading import Thread
 import queue as Queue
-from scipy.sparse import csr_matrix,issparse,vstack
+
+from scipy.sparse import csr_matrix,coo_matrix,issparse,vstack,hstack
 import pickle
+
+from tqdm import tqdm
+
 from . import GABI as gbi
 
 class multicore:
@@ -66,7 +71,7 @@ class multicore:
         self.NP = len(self.labels_c)
         self.queue = Queue.Queue()
         for k in range(self.NP):
-            self.queue.put({'gb': gbi.singlecore(self.labels_cS[k],verbose=verbose,tol=tol,max_iter=max_iter,ID='Thread: {}'.format(k)),
+            self.queue.put({'gb': singlecore.GABI(self.labels_cS[k],verbose=verbose,tol=tol,max_iter=max_iter,ID='Thread: {}'.format(k)),
                             'matrix': self.matrix_c[k]
                             })
 
@@ -269,7 +274,7 @@ class multicore:
     def save(self,datapath):
         """save class"""
         file = open(datapath,'w')
-        file.write(pickle.dumps(self.__dict__))
+        file.write(cPickle.dumps(self.__dict__))
         file.close()
 
     def load(self,datapath):
@@ -277,7 +282,7 @@ class multicore:
         file = open(datapath,'r')
         dataPickle = file.read()
         file.close()
-        self.__dict__ = pickle.loads(dataPickle)
+        self.__dict__ = cPickle.loads(dataPickle)
 
 # def GABI_fit_wrapper(matrix,gb,send_end,k):
 #     try:
@@ -449,7 +454,7 @@ def get_all_combination_binary(matrix):
     '''
     pow2 = np.array([np.power(2,i,dtype=np.float32) for i in range(matrix.shape[0])])
     states2 = (matrix.T).dot(pow2)
-    return states2
+    return state2
 
 
 def get_all_combination(matrix):

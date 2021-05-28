@@ -1,7 +1,9 @@
 import numpy as np
 #from sklearn.utils.extmath import logsumexp
 #from sklearn.exceptions import ConvergenceWarning
+import sklearn
 import time
+import multiprocessing as mp
 from tqdm import tqdm
 import pickle
 from scipy.sparse import issparse, csr_matrix, vstack
@@ -21,7 +23,7 @@ matrixCT = gb.predict(matrix)
 
 class singlecore:
 
-    def __init__(self, labels=None, tol=1e-5, max_iter=200, bw=False, yamfile=None, chr_list=[], verbose=False, RandomSampling=False, Nsamp=50000, ID=''):
+    def __init__(self,labels=None,tol=1e-5,max_iter=200,bw=False,yamfile=None,chr_list = [],verbose=False,RandomSampling=False,Nsamp=50000,ID=''):
         '''
             labels: vector of integers representing the membership of the different profiles
             RandomSampling: The matrix is fitted only on Nsamp samples
@@ -29,7 +31,7 @@ class singlecore:
         self.bw = bw
         if self.bw:
             self.yamfile = yamfile
-            if self.yamfile is None:
+            if self.yamfile == None:
                 print('NEED A YAML FILE OR A MATRIX TO CONSOLIDATE')
 
             self.chr_list = chr_list
@@ -43,7 +45,7 @@ class singlecore:
         self.get_all_combination()
 
         #Matrices
-        self.X = np.zeros(self.D)
+        self.X = np.zeros((self.D))
         self.tau = np.ones(self.K)*1./self.K
         self.Tki = np.zeros(self.K)
         self.logPXZ = np.zeros((self.D,self.K))
@@ -83,6 +85,7 @@ class singlecore:
         self.labels = []
         self.general_positions = []
         self.specific_position = []
+        compteur = 0
         listaas = []
         self.chrsizes = []
         # pickle.dump(sparsedmatrix, open('sparsed.p', 'wb+'))
@@ -109,7 +112,7 @@ class singlecore:
                         if litle_bin != 0:
                             chromvalues.extend(
                                 BigWig.stats(element, self.binsize * number_of_bins, chrom_dict[element]))
-                        chromvalues = [0 if chromvalues[i] is None else chromvalues[i] for i in range(len(chromvalues))]
+                        chromvalues = [0 if chromvalues[i] == None else chromvalues[i] for i in range(len(chromvalues))]
                         chromvalues = [True if float(chromvalues[i]) > 0.5 else False for i in range(len(chromvalues))]
                         # here comes a lot of variables to keep track of index , start en ending of each bins
                         # This is needed to recreate a bigwig at the end of GABI
@@ -176,10 +179,10 @@ class singlecore:
             Compute the probability of the observed vector i knowing the state k
             (a priori probability)
         '''
-        term11 = np.dot(np.multiply(self.Z, np.log(self.a11)[:,None]).T, self.X) # K x I
-        term01 = np.dot(np.multiply(self.Z, np.log(self.a01)[:,None]).T, 1-self.X) # K x I
-        term00 = np.dot(np.multiply(1-self.Z, np.log(self.a00)[:,None]).T, 1-self.X) # K x I
-        term10 = np.dot(np.multiply(1-self.Z, np.log(self.a10)[:,None]).T, self.X) # K x I
+        term11 = np.dot(np.multiply(self.Z,np.log(self.a11)[:,None]).T,self.X) # K x I
+        term01 = np.dot(np.multiply(self.Z,np.log(self.a01)[:,None]).T,1-self.X) # K x I
+        term00 = np.dot(np.multiply(1-self.Z,np.log(self.a00)[:,None]).T,1-self.X) # K x I
+        term10 = np.dot(np.multiply(1-self.Z,np.log(self.a10)[:,None]).T,self.X) # K x I
 
         self.logPXZ = term11 + term01 + term00 + term10 + np.log(self.tau[:,np.newaxis])
 
@@ -448,21 +451,21 @@ class singlecore:
     def save(self,datapath):
         """save class"""
         file = open(datapath,'w')
-        file.write(pickle.dumps(self.__dict__))
+        file.write(cPickle.dumps(self.__dict__))
         file.close()
 
     def load(self,datapath):
         """ load class"""
         file = open(datapath,'r')
-        datapickle = file.read()
+        dataPickle = file.read()
         file.close()
-        self.__dict__ = pickle.loads(datapickle)
+        self.__dict__ = cPickle.loads(dataPickle)
 
     def get_pickle(self):
-        return pickle.dumps(self.__dict__)
+        return cPickle.dumps(self.__dict__)
 
-    #def set_pickle(self,pickle):
-    #    self.__dict__ = pickle.loads(pickle)
+    def set_pickle(self,pickle):
+        self.__dict__ = cPickle.loads(pickle)
 
 
 def check_if_binary_matrix(matrix):

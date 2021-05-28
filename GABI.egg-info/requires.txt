@@ -1,0 +1,4 @@
+numpy
+pybigwig
+scipy
+tdqm
