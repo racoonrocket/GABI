@@ -2,6 +2,8 @@
 Genome Annotation using Bayesian Inference (GABI) is a tool
 that allow to treat epigenomic data after peak calling
 in the case you have not summed your repetitions.
+
+
 ![Alt text](Capture_GABI.png)
 
 ##Requirements :
@@ -16,12 +18,10 @@ in the case you have not summed your repetitions.
 ### Simple Core Version
 #### Inputs:
  - **matrix**: MxN binary matrix (boolean values only), can be sparsed (CSR) or dense. 
- <br>
- - **labels**: M dim vector of profiles clusters (or cell type) membership <br>
+ - **labels**: M dim vector of profiles clusters (or cell type) membership 
  /!\ The labels vector must start from zero and only contains integer
-  
  - **example** : you have 4 differents clusters of respectively 2,2,1,1 epigenomic profiles,each profile contains 30 values. your
-  labels vector (6*1) & and your matrix (30 * 6)  will look like : 
+  labels vector (6*1) & and your matrix (30*6)  will look like : 
   ``` 
 matrix = numpy.array([True,False,...,False],[True,False,...,True],[True,True,...,True],[True,True,...,False],[,False,...,False],[True,False,...,False])
 labels = numpy.array([0,0,1,1,2,3])

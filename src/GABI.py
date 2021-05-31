@@ -127,7 +127,6 @@ class singlecore:
                                     self.specific_position.append([self.binsize * i + 1 for i in range(number_of_bins)])
                                 self.savedheader = BigWig.header()
                                 self.chrsizes.append(chrom_dict[element])
-                                print(self.savedheader)
                         # the matrix was saved on the hard disk to save some RAM
                         # It was more usefull before when the matrix was not sparsed
                         # maybe its not usefull anymore will see
@@ -140,7 +139,8 @@ class singlecore:
                         # listaas = None
             except:
                 print("ERROR This repetition did not work !!! ")
-                continue
+                self.labels.pop(BW_paths2.index(OneBWPath))
+                pass
         # listaas = pickle.load(open('sparsed.p', 'rb'))
         self.labels = np.array(self.labels)
         return vstack(listaas)
