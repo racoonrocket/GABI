@@ -13,13 +13,13 @@ import pickle
 from . import GABI as gbi
 
 class multicore:
-    def __init__(self,matrix=None,labels=None,distmat=[],bw=False,yamfile="sources.yaml",chr_list = [],verbose=False,NClust=5,tol=1e-2,max_iter=200):
+    def __init__(self,binsize=5000,matrix=None,labels=None,distmat=[],bw=False,yamfile="sources.yaml",chr_list = [],verbose=False,NClust=5,tol=1e-2,max_iter=200):
 
         self.bw = bw
         if self.bw:
             self.yamfile = yamfile
             self.chr_list = chr_list
-            self.binsize = 100000
+            self.binsize = binsize
             self.matrixbw = self.load_bigwig()
             self.labels = self.labels.astype(np.int32)
             matrix = self.matrixbw
@@ -101,14 +101,14 @@ class multicore:
                     print(OneBWPath)                                 # open the big wig
                     chrom_dict = BigWig.chroms()
                     for element in self.chr_list:
-                        #since there is no function to extract a specific bin size along a big wig
+                        #since there is no function to extract a specific bin size along a wig
                         #We create the maximum number of bin from the choosed bin size and add a litle bin to complete a the end
                         #total nucleotides = number_of_bins * binsize + litle_bin (simple euclidian division)
                         number_of_bins = chrom_dict[element] // self.binsize
                         litle_bin = chrom_dict[element] % self.binsize
                         chromvalues = [BigWig.stats(element, self.binsize * i, self.binsize * (i + 1))[0] for i in
                                        range(number_of_bins)]
-                        if litle_bin != 0:
+                        if litle_bin > 1:
                             chromvalues.extend(BigWig.stats(element, self.binsize * number_of_bins, chrom_dict[element]))
                         chromvalues = [0 if chromvalues[i] is None else chromvalues[i] for i in range(len(chromvalues))]
                         chromvalues = [True if chromvalues[i] > 0.5 else False for i in range(len(chromvalues))]
@@ -116,7 +116,7 @@ class multicore:
                         #This is needed to recreate a bigwig at the end of GABI
                         if BW_paths2.index(OneBWPath) == 0:
                             self.general_positions.append([self.binsize * i + 1 for i in range(number_of_bins)])
-                            if litle_bin != 0:
+                            if litle_bin > 1:
                                 self.general_positions[-1].append(number_of_bins * self.binsize + litle_bin + 1)
                             if len(self.specific_position) != 0:
                                 self.specific_position.append([self.binsize * i + self.specific_position[-1][-1] + 1 for i in range(number_of_bins)])
@@ -125,6 +125,7 @@ class multicore:
                             self.savedheader = BigWig.header()
                             self.chrsizes.append(chrom_dict[element])
                             print(self.savedheader)
+                            print("litle ",litle_bin,"general position",self.general_positions[-1],"size",chrom_dict[element]) 
                     #the matrix was saved on the hard disk to save some RAM
                     #It was more usefull before when the matrix was not sparsed
                     #maybe its not usefull anymore will see
@@ -134,7 +135,7 @@ class multicore:
                     else:
                         listaas.append(csr_matrix(chromvalues))
                     #pickle.dump(listaas, open('sparsed.p', 'wb+'))
-                    #listaas = None
+                    #listaas = None 
         #listaas = pickle.load(open('sparsed.p', 'rb'))
         self.labels = np.array(self.labels)
         return vstack(listaas)
